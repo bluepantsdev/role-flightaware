@@ -1,0 +1,64 @@
+---
+# tasks file for flightaware
+
+# install the repo_url deb file and update the apt cache
+- name: Setup the flightaware apt repo on Raspberry Pi
+  when: flightaware_enabled and ansible_os_family == "Debian"
+  notify: Reboot host
+  block:
+    - name: Install the flightaware apt repo
+      ansible.builtin.apt:
+        deb: "{{ repo_url }}"
+        update_cache: true
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    # install the piaware package
+    - name: Install the piaware package
+      ansible.builtin.apt:
+        name: piaware
+        state: present
+
+    # install the dump1090-fa package
+    - name: Install the dump1090-fa package
+      ansible.builtin.apt:
+        name: dump1090-fa
+        state: present
+
+    # install the dump978-fa package (not needed outside of US)
+    - name: Install the dump978-fa package
+      ansible.builtin.apt:
+        name: dump978-fa
+        state: present
+      when: install_dump978
+
+# Purge the flight aware packages and repo
+- name: Purge the flightaware packages and repo
+  notify: Reboot host
+  when: ( not flightaware_enabled or flightaware_enabled == false ) and ansible_os_family == "Debian"
+  block:
+    - name: Purge the piaware package
+      ansible.builtin.apt:
+        name: piaware
+        state: absent
+
+    - name: Purge the dump1090-fa package
+      ansible.builtin.apt:
+        name: dump1090-fa
+        state: absent
+
+    - name: Purge the dump978-fa package
+      ansible.builtin.apt:
+        name: dump978-fa
+        state: absent
+      when: install_dump978
+
+    - name: Purge the flightaware apt repo
+      ansible.builtin.apt:
+        name: flightaware-apt-repository
+        state: absent
+        purge: yes
+        autoremove: yes
+        update_cache: yes
